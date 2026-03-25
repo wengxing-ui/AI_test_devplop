@@ -1,0 +1,11 @@
+fastapi==0.110.0
+uvicorn==0.29.0
+pytest==8.1.1
+requests==2.31.0
+pydantic==2.6.4
+allure-pytest==2.13.5
+python-dotenv==1.0.1
+
+# AI（后面用）
+langchain==0.2.0
+langchain-openai==0.1.7
