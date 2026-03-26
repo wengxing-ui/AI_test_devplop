@@ -3,7 +3,6 @@
 import os
 import pytest
 from core.swagger_parser import SwaggerParser
-from core.model_generator import ModelGenerator
 from core.test_case_generator import TestCaseGenerator
 
 def generate_test_cases(swagger_file_path: str):
@@ -21,14 +20,12 @@ def generate_test_cases(swagger_file_path: str):
     for path, methods in paths.items():
         for method, details in methods.items():
             print(f"Generating {method.upper()} test case, path: {path}")
-            test_case_code = test_case_generator.generate_test_cases(path, method)
-
             # 保存生成的测试用例文件
             file_name = f'testcases/test_{path.replace("/", "_").replace("{", "").replace("}", "")}.py'
-            os.makedirs(os.path.dirname(file_name), exist_ok=True)
 
-            with open(file_name, 'w') as f:
-                f.write(test_case_code)
+            test_case_generator.generate_test_cases_with_ai_exceptions(
+                path, method, file_name
+            )
 
             print(f"Testcases generated: {file_name}")
 
