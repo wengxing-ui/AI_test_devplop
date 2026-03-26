@@ -18,7 +18,7 @@ class TestCaseGenerator:
         self.model_generator = ModelGenerator(swagger_file_path)
         self.swagger_parser = SwaggerParser(swagger_file_path)
 
-    def generate_test_cases(self, path: str, method: str) -> str:
+    def generate_test_cases(self, path: str, method: str) -> str: # 生成正常用例
         """
         根据 Swagger 接口生成 pytest 测试用例
         """
@@ -80,7 +80,7 @@ class TestCaseGenerator:
             request_schema: dict,
             var_names: set[str],
             use_unique_payload: bool,
-        ) -> str:
+        ) -> str:  # 构建请求体字面量
             if not request_schema:
                 return "{}"
 
@@ -166,6 +166,74 @@ def test_{test_name(path)}(base_url):
 """
 
         return test_case_code
+
+    def _test_name_for_path(self, p: str) -> str:
+        return p.replace("/", "_").replace("{", "").replace("}", "")
+
+    def _build_api_info_for_ai(self, path: str, method: str) -> dict:
+        op = self.swagger_parser.swagger_data["paths"][path][method]
+
+        path_vars: list[str] = []
+        for p in op.get("parameters", []) or []:
+            if p.get("in") == "path" and p.get("name"):
+                path_vars.append(p["name"])
+
+        request_schema = self.swagger_parser.get_request_schema(path, method) or {}
+        request_required = request_schema.get("required", []) if isinstance(request_schema, dict) else []
+        request_properties = request_schema.get("properties", {}) if isinstance(request_schema, dict) else {}
+
+        responses = op.get("responses", {}) or {}
+        response_status_hints: list[int] = []
+        for k in responses.keys():
+            try:
+                response_status_hints.append(int(k))
+            except Exception:
+                pass
+
+        return {
+            "path": path,
+            "method": method,
+            "path_vars": path_vars,
+            "request_required": request_required,
+            "request_properties": request_properties,
+            "response_status_hints": response_status_hints,
+            "endpoint_notes": op.get("summary") or "",
+        }
+
+    def generate_test_cases_with_ai_exceptions(
+        self, path: str, method: str, test_file_path: str
+    ) -> None:
+        """
+        生成正常用例并写入文件；若开启开关，则追加 AI 异常场景用例。
+
+        说明：此方法负责“正常用例写入 + 异常用例追加”，以确保不会被 run.py 的覆盖逻辑破坏。
+        """
+
+        os.makedirs(os.path.dirname(test_file_path), exist_ok=True)
+
+        test_fn_name = f"test_{self._test_name_for_path(path)}"
+        test_case_code = self.generate_test_cases(path, method)
+
+        existing_code = ""
+        if os.path.exists(test_file_path):
+            with open(test_file_path, "r", encoding="utf-8") as f:
+                existing_code = f.read()
+
+        # 写入正常用例（只在函数不存在时追加）
+        if f"def {test_fn_name}(" not in existing_code:
+            with open(test_file_path, "a", encoding="utf-8") as f:
+                if existing_code and not existing_code.endswith("\n"):
+                    f.write("\n")
+                f.write(test_case_code)
+
+        # 追加异常用例
+        if not config.ENABLE_AI_EXCEPTIONS:
+            return
+
+        from core.ai_exception_generator import inject_exception_tests
+
+        api_info = self._build_api_info_for_ai(path, method)
+        inject_exception_tests(api_info, test_file_path)
 
 if __name__ == "__main__":
     swagger_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "swagger.json"))

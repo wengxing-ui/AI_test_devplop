@@ -1,19 +1,20 @@
 {
     "openapi": "3.1.0",
     "info": {
-        "title": "User Center API",
-        "version": "0.1.0"
+        "title": "Test API",
+        "version": "1.0.0"
     },
     "paths": {
         "/user/register": {
             "post": {
                 "summary": "Register",
+                "description": "用户注册接口\n\n- **username**: 用户名，3-20个字符，只能包含字母、数字和下划线\n- **password**: 密码，6-30个字符\n- **email**: 有效的邮箱地址",
                 "operationId": "register_user_register_post",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/RegisterRequest"
+                                "$ref": "#/components/schemas/UserRegisterRequest"
                             }
                         }
                     },
@@ -24,7 +25,29 @@
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "请求参数错误",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "用户名或邮箱已存在",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
                             }
                         }
                     },
@@ -44,6 +67,7 @@
         "/user/{user_id}": {
             "get": {
                 "summary": "Get User",
+                "description": "获取用户信息\n\n- **user_id**: 用户唯一标识",
                 "operationId": "get_user_user__user_id__get",
                 "parameters": [
                     {
@@ -51,7 +75,7 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
+                            "type": "string",
                             "title": "User Id"
                         }
                     }
@@ -61,7 +85,19 @@
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
-                                "schema": {}
+                                "schema": {
+                                    "$ref": "#/components/schemas/StandardResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "用户不存在",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
                             }
                         }
                     },
@@ -78,73 +114,16 @@
                 }
             }
         },
-        "/user/update": {
-            "put": {
-                "summary": "Update User",
-                "operationId": "update_user_user_update_put",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/UpdateRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
+        "/": {
+            "get": {
+                "summary": "Root",
+                "operationId": "root__get",
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
                                 "schema": {}
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/user/delete/{user_id}": {
-            "delete": {
-                "summary": "Delete User",
-                "operationId": "delete_user_user_delete__user_id__delete",
-                "parameters": [
-                    {
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "title": "User Id"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successful Response",
-                        "content": {
-                            "application/json": {
-                                "schema": {}
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation Error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/HTTPValidationError"
-                                }
                             }
                         }
                     }
@@ -154,6 +133,24 @@
     },
     "components": {
         "schemas": {
+            "ErrorResponse": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Msg"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "code",
+                    "msg"
+                ],
+                "title": "ErrorResponse"
+            },
             "HTTPValidationError": {
                 "properties": {
                     "detail": {
@@ -167,19 +164,52 @@
                 "type": "object",
                 "title": "HTTPValidationError"
             },
-            "RegisterRequest": {
+            "StandardResponse": {
+                "properties": {
+                    "code": {
+                        "type": "integer",
+                        "title": "Code",
+                        "default": 0
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Msg",
+                        "default": "success"
+                    },
+                    "data": {
+                        "anyOf": [
+                            {},
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Data"
+                    }
+                },
+                "type": "object",
+                "title": "StandardResponse"
+            },
+            "UserRegisterRequest": {
                 "properties": {
                     "username": {
                         "type": "string",
-                        "title": "Username"
+                        "maxLength": 20,
+                        "minLength": 3,
+                        "title": "Username",
+                        "description": "用户名，3-20个字符"
                     },
                     "password": {
                         "type": "string",
-                        "title": "Password"
+                        "maxLength": 30,
+                        "minLength": 6,
+                        "title": "Password",
+                        "description": "密码，6-30个字符"
                     },
                     "email": {
                         "type": "string",
-                        "title": "Email"
+                        "format": "email",
+                        "title": "Email",
+                        "description": "邮箱地址"
                     }
                 },
                 "type": "object",
@@ -188,31 +218,7 @@
                     "password",
                     "email"
                 ],
-                "title": "RegisterRequest"
-            },
-            "UpdateRequest": {
-                "properties": {
-                    "user_id": {
-                        "type": "integer",
-                        "title": "User Id"
-                    },
-                    "email": {
-                        "anyOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "type": "null"
-                            }
-                        ],
-                        "title": "Email"
-                    }
-                },
-                "type": "object",
-                "required": [
-                    "user_id"
-                ],
-                "title": "UpdateRequest"
+                "title": "UserRegisterRequest"
             },
             "ValidationError": {
                 "properties": {
